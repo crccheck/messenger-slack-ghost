@@ -18,32 +18,42 @@ function getChannelId(dataStore, name) {
   return data.id
 }
 
+const threadStore = {}
+
 rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
   const id = getChannelId(rtm.dataStore, CHANNEL)
 
-  messenger.on('text', ({text, session}) => {
-    console.log(session.profile)
-    // the rtm client can't override icon_url/username
+  messenger.on('text', ({event, senderId, text, session}) => {
+    let username
+    let thread_ts
+    let threadKey
+    if (event.message.is_echo) {
+      username = event.message.app_id
+      threadKey = event.recipient.id
+    } else {
+      username = `${session.profile.first_name} ${session.profile.last_name}`
+      threadKey = senderId
+    }
+    // Use the web client b/c the rtm client can't override icon_url/username
     web.chat.postMessage(id, text, {
       icon_url: session.profile.profile_pic,
-      username: `${session.profile.first_name} ${session.profile.last_name}`,
-      thread_ts: session.thread_ts
+      username,
+      thread_ts: threadStore[threadKey]
     }, (err, res) => {
       if (err) {
         console.error(err)
         return
       }
 
-      if (!session.thread_ts) {
-        session.thread_ts = res.ts
+      if (!threadStore[threadKey]) {
+        threadStore[threadKey] = res.ts
       }
-      console.log(res)
     })
   })
 
   const user = rtm.dataStore.getUserById(rtm.activeUserId)
   const team = rtm.dataStore.getTeamById(rtm.activeTeamId)
-  console.log('Connected to ' + team.name + ' as ' + user.name)
+  console.log(`Connected to ${team.name} as ${user.name}`)
 });
 
 messenger.start()
