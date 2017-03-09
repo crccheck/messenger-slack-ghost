@@ -1,0 +1,20 @@
+{
+  "name": "slack-ghost",
+  "version": "0.0.0",
+  "description": "Facebook Messenger to Slack connector",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "DEBUG=${DEBUG:-slackghost:*,messenger*} nodemon -x npm start"
+  },
+  "engines": {
+    "node": ">6.0"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@slack/client": "^3.8.1",
+    "launch-vehicle-fbm": "^1.0.0"
+  },
+  "devDependencies": {},
+  "private": true
+}
