@@ -19,9 +19,7 @@
   "dependencies": {
     "@slack/client": "^3.8.1",
     "debug": "^2.6.1",
-    "launch-vehicle-fbm": "^1.0.0",
-    "request": "^2.81.0",
-    "request-promise": "^4.1.1"
+    "launch-vehicle-fbm": "^1.0.0"
   },
   "devDependencies": {
     "flow-bin": "^0.41.0",
