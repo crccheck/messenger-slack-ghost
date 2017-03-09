@@ -12,7 +12,7 @@ const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   dataStore: new MemoryDataStore()
 })
 
-function getChannelId(dataStore, name) {
+function getChannelId(name, dataStore) {
   const needle = name.replace(/^#/, '')
   const data = dataStore.getChannelByName(needle) || dataStore.getGroupByName(needle)
   return data.id
@@ -21,11 +21,10 @@ function getChannelId(dataStore, name) {
 const threadStore = {}
 
 rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
-  const id = getChannelId(rtm.dataStore, CHANNEL)
+  const id = getChannelId(CHANNEL, rtm.dataStore)
 
   messenger.on('text', ({event, senderId, text, session}) => {
     let username
-    let thread_ts
     let threadKey
     if (event.message.is_echo) {
       username = event.message.app_id
