@@ -1,6 +1,7 @@
 const { Messenger } = require('launch-vehicle-fbm')
 const { MemoryDataStore, RtmClient, WebClient } = require('@slack/client')
 const RTM_CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS.RTM
+const RTM_EVENTS = require('@slack/client').RTM_EVENTS
 
 const CHANNEL = process.env.SLACK_CHANNEL
 
@@ -18,7 +19,7 @@ function getChannelId(name, dataStore) {
   return data.id
 }
 
-const threadStore = {}
+const threadStore = new Map()
 
 rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
   const id = getChannelId(CHANNEL, rtm.dataStore)
@@ -37,15 +38,15 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
     web.chat.postMessage(id, text, {
       icon_url: session.profile.profile_pic,
       username,
-      thread_ts: threadStore[threadKey]
+      thread_ts: threadStore.get(threadKey)
     }, (err, res) => {
       if (err) {
         console.error(err)
         return
       }
 
-      if (!threadStore[threadKey]) {
-        threadStore[threadKey] = res.ts
+      if (!threadStore.has(threadKey)) {
+        threadStore.set(threadKey, res.ts)
       }
     })
   })
@@ -53,7 +54,15 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
   const user = rtm.dataStore.getUserById(rtm.activeUserId)
   const team = rtm.dataStore.getTeamById(rtm.activeTeamId)
   console.log(`Connected to ${team.name} as ${user.name}`)
-});
+})
+
+rtm.on(RTM_EVENTS.MESSAGE, (message) => {
+  if (!message.thread_ts) {
+    return
+  }
+
+  console.log(message)
+})
 
 messenger.start()
 rtm.start()
