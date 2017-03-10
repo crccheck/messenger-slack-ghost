@@ -30,34 +30,48 @@ function findSenderForThread (ts) {
   }
 }
 
+let slackChannelId
+
+function post (text, event, senderId, session) {
+  if (!slackChannelId) {
+    console.error('Tried to post a message before channel id was found')
+  }
+
+  let username
+  let threadKey
+  if (event.message.is_echo) {
+    username = event.message.app_id
+    threadKey = event.recipient.id
+  } else {
+    username = `${session.profile.first_name} ${session.profile.last_name}`
+    threadKey = senderId
+  }
+  // Use the web client b/c the rtm client can't override icon_url/username or do threads
+  web.chat.postMessage(slackChannelId, text, {
+    icon_url: session.profile.profile_pic,
+    username,
+    thread_ts: threadStore.get(threadKey),
+  }, (err, res) => {
+    if (err) {
+      console.error(err)
+      return
+    }
+
+    if (!threadStore.has(threadKey)) {
+      threadStore.set(threadKey, res.ts)
+    }
+  })
+}
+
 rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
-  const id = getChannelId(CHANNEL, rtm.dataStore)
+  slackChannelId = getChannelId(CHANNEL, rtm.dataStore)
 
   messenger.on('text', ({event, senderId, text, session}) => {
-    let username
-    let threadKey
-    if (event.message.is_echo) {
-      username = event.message.app_id
-      threadKey = event.recipient.id
-    } else {
-      username = `${session.profile.first_name} ${session.profile.last_name}`
-      threadKey = senderId
-    }
-    // Use the web client b/c the rtm client can't override icon_url/username or do threads
-    web.chat.postMessage(id, text, {
-      icon_url: session.profile.profile_pic,
-      username,
-      thread_ts: threadStore.get(threadKey),
-    }, (err, res) => {
-      if (err) {
-        console.error(err)
-        return
-      }
+    post(text, event, senderId, session)
+  })
 
-      if (!threadStore.has(threadKey)) {
-        threadStore.set(threadKey, res.ts)
-      }
-    })
+  messenger.on('message.image', ({event, senderId, url, session}) => {
+    post(url, event, senderId, session)
   })
 
   const user = rtm.dataStore.getUserById(rtm.activeUserId)
