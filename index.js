@@ -74,6 +74,15 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
     post(url, event, senderId, session)
   })
 
+  messenger.on('message.sticker', ({event, senderId, url, session}) => {
+    post(url, event, senderId, session)
+  })
+
+  messenger.on('message.thumbsup', ({event, senderId, session}) => {
+    // Ignore the url and use the native Slack thumbsup
+    post(':thumbsup:', event, senderId, session)
+  })
+
   const user = rtm.dataStore.getUserById(rtm.activeUserId)
   const team = rtm.dataStore.getTeamById(rtm.activeTeamId)
   console.log(`Connected to ${team.name} as ${user.name}`)
