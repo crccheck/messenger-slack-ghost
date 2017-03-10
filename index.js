@@ -10,10 +10,10 @@ const web = new WebClient(process.env.SLACK_API_TOKEN)
 const messenger = new Messenger()
 const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   logLevel: 'error',
-  dataStore: new MemoryDataStore()
+  dataStore: new MemoryDataStore(),
 })
 
-function getChannelId(name, dataStore) {
+function getChannelId (name, dataStore) {
   const needle = name.replace(/^#/, '')
   const data = dataStore.getChannelByName(needle) || dataStore.getGroupByName(needle)
   return data.id
@@ -21,7 +21,7 @@ function getChannelId(name, dataStore) {
 
 const threadStore = new Map()
 
-function findSenderForThread(ts) {
+function findSenderForThread (ts) {
   let key, value
   for ([key, value] of threadStore) {
     if (value === ts) {
@@ -47,7 +47,7 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
     web.chat.postMessage(id, text, {
       icon_url: session.profile.profile_pic,
       username,
-      thread_ts: threadStore.get(threadKey)
+      thread_ts: threadStore.get(threadKey),
     }, (err, res) => {
       if (err) {
         console.error(err)
@@ -76,8 +76,8 @@ rtm.on(RTM_EVENTS.MESSAGE, (message) => {
     messenger.send(senderId, new Text(message.text))
   } else {
     web.chat.postMessage(message.channel, '_Sorry, but this thread is closed to new messages_', {
-      thread_ts: message.thread_ts
-    });
+      thread_ts: message.thread_ts,
+    })
     console.error(`No thread found ${message.text}`)
   }
 })

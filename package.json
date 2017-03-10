@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "DEBUG=${DEBUG:-slackghost:*,messenger*} nodemon -x npm start"
+    "dev": "DEBUG=${DEBUG:-slackghost:*,messenger*} nodemon -x npm start",
+    "lint": "eslint .",
+    "pretest": "npm run lint"
   },
   "engines": {
     "node": ">6.0"
@@ -15,6 +17,11 @@
     "@slack/client": "^3.8.1",
     "launch-vehicle-fbm": "^1.0.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "eslint": "^3.17.1",
+    "eslint-config-standard": "^7.0.1",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^2.1.1"
+  },
   "private": true
 }
