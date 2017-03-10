@@ -7,7 +7,7 @@ const CHANNEL = process.env.SLACK_CHANNEL
 
 
 const web = new WebClient(process.env.SLACK_API_TOKEN)
-const messenger = new Messenger()
+const messenger = new Messenger({emitGreetings: false})
 const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   logLevel: 'error',
   dataStore: new MemoryDataStore(),
