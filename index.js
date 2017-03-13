@@ -16,8 +16,6 @@ const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
 // UTILITIES
 ////////////
 
-let slackChannelId
-
 function getChannelId (name, dataStore) {
   const needle = name.replace(/^#/, '')  // getGroupByName does not like prefixes
   const data = dataStore.getChannelByName(needle) || dataStore.getGroupByName(needle)
@@ -35,12 +33,7 @@ function findSenderForThread (ts) {
   }
 }
 
-function post (text, event, session) {
-  if (!slackChannelId) {
-    console.error('Tried to post a message before channel id was found')
-    return
-  }
-
+function post (slackChannelId, text, event, session) {
   let username
   let threadKey
   if (event.message.is_echo) {
@@ -71,23 +64,23 @@ function post (text, event, session) {
 /////////
 
 rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
-  slackChannelId = getChannelId(CHANNEL, rtm.dataStore)
+  const channelId = getChannelId(CHANNEL, rtm.dataStore)
 
   messenger.on('text', ({event, text, session}) => {
-    post(text, event, session)
+    post(channelId, text, event, session)
   })
 
   messenger.on('message.image', ({event, url, session}) => {
-    post(url, event, session)
+    post(channelId, url, event, session)
   })
 
   messenger.on('message.sticker', ({event, url, session}) => {
-    post(url, event, session)
+    post(channelId, url, event, session)
   })
 
   messenger.on('message.thumbsup', ({event, session}) => {
     // Ignore the url and use the native Slack thumbsup
-    post(':thumbsup:', event, session)
+    post(channelId, ':thumbsup:', event, session)
   })
 
   const user = rtm.dataStore.getUserById(rtm.activeUserId)
