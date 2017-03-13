@@ -33,7 +33,7 @@ function findSenderForThread (ts) {
   }
 }
 
-function post (slackChannelId, text, event, session) {
+function post (channelId, text, event, session) {
   let username
   let threadKey
   if (event.message.is_echo) {
@@ -44,7 +44,7 @@ function post (slackChannelId, text, event, session) {
     threadKey = event.sender.id
   }
   // Use the web client b/c the rtm client can't override icon_url/username or do threads
-  web.chat.postMessage(slackChannelId, text, {
+  web.chat.postMessage(channelId, text, {
     icon_url: session.profile.profile_pic,
     username,
     thread_ts: threadStore.get(threadKey),
