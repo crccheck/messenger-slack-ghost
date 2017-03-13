@@ -96,13 +96,13 @@ rtm.on(RTM_EVENTS.MESSAGE, (message) => {
 
   const senderId = findSenderForThread(message.thread_ts)
   if (senderId) {
-    messenger.send(senderId, new Text(message.text))
-  } else {
-    web.chat.postMessage(message.channel, '_Sorry, but this thread is closed to new messages_', {
-      thread_ts: message.thread_ts,
-    })
-    console.error(`No thread found ${message.text}`)
+    return messenger.send(senderId, new Text(message.text))
   }
+
+  console.error(`No thread found ${message.text}`)
+  return web.chat.postMessage(message.channel, '_Sorry, but this thread is closed to new messages_', {
+    thread_ts: message.thread_ts,
+  })
 })
 
 messenger.start()
