@@ -3,9 +3,6 @@ const { MemoryDataStore, RtmClient, WebClient } = require('@slack/client')
 const RTM_CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS.RTM
 const RTM_EVENTS = require('@slack/client').RTM_EVENTS
 
-const CHANNEL = process.env.SLACK_CHANNEL
-
-
 const web = new WebClient(process.env.SLACK_API_TOKEN)
 const messenger = new Messenger({emitGreetings: false})
 const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
@@ -64,7 +61,7 @@ function post (channelId, text, event, session) {
 /////////
 
 rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
-  const channelId = getChannelId(CHANNEL, rtm.dataStore)
+  const channelId = getChannelId(process.env.SLACK_CHANNEL, rtm.dataStore)
 
   messenger.on('text', ({event, text, session}) => {
     post(channelId, text, event, session)
