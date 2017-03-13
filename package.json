@@ -15,7 +15,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@slack/client": "^3.8.1",
-    "launch-vehicle-fbm": "^1.0.0"
+    "launch-vehicle-fbm": "^1.1.1"
   },
   "devDependencies": {
     "eslint": "^3.17.1",
