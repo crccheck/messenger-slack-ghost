@@ -13,8 +13,13 @@ const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   dataStore: new MemoryDataStore(),
 })
 
+// UTILITIES
+////////////
+
+let slackChannelId
+
 function getChannelId (name, dataStore) {
-  const needle = name.replace(/^#/, '')
+  const needle = name.replace(/^#/, '')  // getGroupByName does not like prefixes
   const data = dataStore.getChannelByName(needle) || dataStore.getGroupByName(needle)
   return data.id
 }
@@ -30,11 +35,10 @@ function findSenderForThread (ts) {
   }
 }
 
-let slackChannelId
-
-function post (text, event, senderId, session) {
+function post (text, event, session) {
   if (!slackChannelId) {
     console.error('Tried to post a message before channel id was found')
+    return
   }
 
   let username
@@ -44,7 +48,7 @@ function post (text, event, senderId, session) {
     threadKey = event.recipient.id
   } else {
     username = `${session.profile.first_name} ${session.profile.last_name}`
-    threadKey = senderId
+    threadKey = event.sender.id
   }
   // Use the web client b/c the rtm client can't override icon_url/username or do threads
   web.chat.postMessage(slackChannelId, text, {
@@ -63,24 +67,27 @@ function post (text, event, senderId, session) {
   })
 }
 
+// EVENTS
+/////////
+
 rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
   slackChannelId = getChannelId(CHANNEL, rtm.dataStore)
 
-  messenger.on('text', ({event, senderId, text, session}) => {
-    post(text, event, senderId, session)
+  messenger.on('text', ({event, text, session}) => {
+    post(text, event, session)
   })
 
-  messenger.on('message.image', ({event, senderId, url, session}) => {
-    post(url, event, senderId, session)
+  messenger.on('message.image', ({event, url, session}) => {
+    post(url, event, session)
   })
 
-  messenger.on('message.sticker', ({event, senderId, url, session}) => {
-    post(url, event, senderId, session)
+  messenger.on('message.sticker', ({event, url, session}) => {
+    post(url, event, session)
   })
 
-  messenger.on('message.thumbsup', ({event, senderId, session}) => {
+  messenger.on('message.thumbsup', ({event, session}) => {
     // Ignore the url and use the native Slack thumbsup
-    post(':thumbsup:', event, senderId, session)
+    post(':thumbsup:', event, session)
   })
 
   const user = rtm.dataStore.getUserById(rtm.activeUserId)
@@ -90,7 +97,7 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
 
 rtm.on(RTM_EVENTS.MESSAGE, (message) => {
   if (!message.thread_ts || !message.user) {
-    // must be in a thread, and must be from a human
+    // Must be in a thread, and must be from a human
     return
   }
 
