@@ -2,6 +2,7 @@ const { Messenger, Text } = require('launch-vehicle-fbm')
 const { MemoryDataStore, RtmClient, WebClient } = require('@slack/client')
 const RTM_CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS.RTM
 const RTM_EVENTS = require('@slack/client').RTM_EVENTS
+const settings = require('./settings')
 
 const web = new WebClient(process.env.SLACK_API_TOKEN)
 const messenger = new Messenger({emitGreetings: false})
@@ -34,7 +35,7 @@ function post (channelId, text, event, session) {
   let username
   let threadKey
   if (event.message.is_echo) {
-    username = event.message.app_id
+    username = settings.apps[event.message.app_id] || event.message.app_id
     threadKey = event.recipient.id
   } else {
     username = `${session.profile.first_name} ${session.profile.last_name}`
