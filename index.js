@@ -80,6 +80,11 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
     post(channelId, ':thumbsup:', event, session)
   })
 
+  messenger.on('message.template', ({event, session, attachment}) => {
+    const text = attachment.title
+    post(channelId, text, event, session)
+  })
+
   const user = rtm.dataStore.getUserById(rtm.activeUserId)
   const team = rtm.dataStore.getTeamById(rtm.activeTeamId)
   console.log(`Connected to ${team.name} as ${user.name}`)
