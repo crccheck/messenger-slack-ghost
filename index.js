@@ -5,7 +5,7 @@ const RTM_EVENTS = require('@slack/client').RTM_EVENTS
 const settings = require('./settings')
 
 const web = new WebClient(process.env.SLACK_API_TOKEN)
-const messenger = new Messenger({emitGreetings: false})
+const messenger = new Messenger({emitGreetings: false, pages: settings.pages})
 const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   logLevel: 'error',
   dataStore: new MemoryDataStore(),
@@ -22,11 +22,11 @@ function getChannelId (name, dataStore) {
 
 const threadStore = new Map()
 
-function findSenderForThread (ts) {
+function findMetaForThread (ts) {
   let key, value
   for ([key, value] of threadStore) {
     if (value === ts) {
-      return key
+      return key.split(':')
     }
   }
 }
@@ -34,12 +34,18 @@ function findSenderForThread (ts) {
 function post (channelId, text, event, session) {
   let username
   let threadKey
+  const pageId = session._pageId
   if (event.message.is_echo) {
+    if (event.message.app_id === process.env.FACEBOOK_APP_ID) {
+      console.log('IGNOREING MESSAGE')
+      // Ignore messages from yourself
+      return
+    }
     username = settings.apps[event.message.app_id] || event.message.app_id
-    threadKey = event.recipient.id
+    threadKey = event.recipient.id + ':' + pageId
   } else {
     username = `${session.profile.first_name} ${session.profile.last_name}`
-    threadKey = event.sender.id
+    threadKey = event.sender.id + ':' + pageId
   }
   // Use the web client b/c the rtm client can't override icon_url/username or do threads
   web.chat.postMessage(channelId, text, {
@@ -94,18 +100,20 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
 rtm.on(RTM_EVENTS.MESSAGE, (message) => {
   if (!message.thread_ts || !message.user) {
     // Must be in a thread, and must be from a human
+    // FIXME must be in a thread about a message
     return
   }
 
-  const senderId = findSenderForThread(message.thread_ts)
-  if (senderId) {
-    return messenger.send(senderId, new Text(message.text))
+  try {
+    const [senderId, pageId] = findMetaForThread(message.thread_ts)
+    return messenger.send(senderId, new Text(message.text), pageId)
+  } catch (e) {
+    console.error(`No thread found ${message.text}`)
+    // TODO figure out how to not trigger on random threaded conversations
+    // return web.chat.postMessage(message.channel, '_Sorry, but this thread is closed to new messages_', {
+    //   thread_ts: message.thread_ts,
+    // })
   }
-
-  console.error(`No thread found ${message.text}`)
-  return web.chat.postMessage(message.channel, '_Sorry, but this thread is closed to new messages_', {
-    thread_ts: message.thread_ts,
-  })
 })
 
 messenger.start()
