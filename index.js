@@ -37,10 +37,10 @@ function post (channelId, text, event, session) {
   const pageId = session._pageId
   if (event.message.is_echo) {
     if (event.message.app_id === process.env.FACEBOOK_APP_ID) {
-      console.log('IGNOREING MESSAGE')
-      // Ignore messages from yourself
+      console.log('IGNORING MESSAGE TO MYSELF: %s', text)
       return
     }
+
     username = settings.apps[event.message.app_id] || event.message.app_id
     threadKey = event.recipient.id + ':' + pageId
   } else {
@@ -106,7 +106,7 @@ rtm.on(RTM_EVENTS.MESSAGE, (message) => {
 
   try {
     const [senderId, pageId] = findMetaForThread(message.thread_ts)
-    return messenger.send(senderId, new Text(message.text), pageId)
+    return messenger.pageSend(pageId, senderId, new Text(message.text))
   } catch (e) {
     console.error(`No thread found ${message.text}`)
     // TODO figure out how to not trigger on random threaded conversations
