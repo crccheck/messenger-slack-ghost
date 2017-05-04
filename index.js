@@ -14,15 +14,15 @@ debug('Using redis cache backend: %s', process.env.REDIS_URL)
 const cacheOptions = {
   engine: new CachemanRedis(redisUrlParse(process.env.REDIS_URL)),
   prefix: process.env.FACEBOOK_APP_ID,
-}
-const fbmCache = new Cacheman('sessions', Object.assign({
   ttl: 7 * 24 * 60 * 60,  // 1 week in seconds
-}, cacheOptions))
+}
+const fbmCache = new Cacheman('sessions', cacheOptions)
 const messenger = new Messenger({emitGreetings: false, pages: settings.pages, cache: fbmCache})
 const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   logLevel: 'error',
   dataStore: new MemoryDataStore(),
 })
+const threadCache = new Cacheman('threads', cacheOptions)
 
 
 // UTILITIES
