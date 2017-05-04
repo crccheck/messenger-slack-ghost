@@ -1,4 +1,3 @@
-const pify = require('bluebird').promisify
 const Cacheman = require('cacheman')
 const CachemanRedis = require('cacheman-redis')
 const debug = require('debug')('slack-ghost')
@@ -34,17 +33,6 @@ function getChannelId (name, dataStore) {
   return data.id
 }
 
-const threadStore = new Map()
-
-function findMetaForThread (ts) {
-  let key, value
-  for ([key, value] of threadStore) {
-    if (value === ts) {
-      return key.split(':')
-    }
-  }
-}
-
 function post (channelId, text, event, session) {
   let senderId
   let threadKey
@@ -63,6 +51,7 @@ function post (channelId, text, event, session) {
     senderId = event.sender.id
   }
   threadKey = pageId + ':' + senderId
+
   let threadTs
   threadCache.get(threadKey)
     .then((value) => {
@@ -124,20 +113,16 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
 rtm.on(RTM_EVENTS.MESSAGE, (message) => {
   if (!message.thread_ts || !message.user) {
     // Must be in a thread, and must be from a human
-    // FIXME must be in a thread about a message
+    // TODO must be in a thread about a Messenger conversation
     return
   }
 
-  try {
-    const [senderId, pageId] = findMetaForThread(message.thread_ts)
-    return messenger.pageSend(pageId, senderId, new Text(message.text))
-  } catch (e) {
-    console.error(`No thread found ${message.text}`)
-    // TODO figure out how to not trigger on random threaded conversations
-    // return web.chat.postMessage(message.channel, '_Sorry, but this thread is closed to new messages_', {
-    //   thread_ts: message.thread_ts,
-    // })
-  }
+  return threadCache.get(message.thread_ts)
+    .then(({senderId, pageId} = {}) => {
+      if (senderId && pageId) {
+        return messenger.pageSend(pageId, senderId, new Text(message.text))
+      }
+    })
 })
 
 messenger.start()
