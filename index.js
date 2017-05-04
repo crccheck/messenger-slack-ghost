@@ -1,15 +1,28 @@
+const Cacheman = require('cacheman')
+const CachemanRedis = require('cacheman-redis')
+const debug = require('debug')('slack-ghost')
 const { Messenger, Text } = require('launch-vehicle-fbm')
+const redisUrlParse = require('redis-url-parse')
 const { MemoryDataStore, RtmClient, WebClient } = require('@slack/client')
 const RTM_CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS.RTM
 const RTM_EVENTS = require('@slack/client').RTM_EVENTS
 const settings = require('./settings')
 
 const web = new WebClient(process.env.SLACK_API_TOKEN)
-const messenger = new Messenger({emitGreetings: false, pages: settings.pages})
+debug('Using redis cache backend: %s', process.env.REDIS_URL)
+const cacheOptions = {
+  engine: new CachemanRedis(redisUrlParse(process.env.REDIS_URL)),
+  prefix: process.env.FACEBOOK_APP_ID,
+  ttl: 7 * 24 * 60 * 60,  // 1 week in seconds
+}
+const fbmCache = new Cacheman('sessions', cacheOptions)
+const messenger = new Messenger({emitGreetings: false, pages: settings.pages, cache: fbmCache})
 const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   logLevel: 'error',
   dataStore: new MemoryDataStore(),
 })
+const threadCache = new Cacheman('threads', cacheOptions)
+
 
 // UTILITIES
 ////////////
@@ -20,48 +33,48 @@ function getChannelId (name, dataStore) {
   return data.id
 }
 
-const threadStore = new Map()
-
-function findMetaForThread (ts) {
-  let key, value
-  for ([key, value] of threadStore) {
-    if (value === ts) {
-      return key.split(':')
-    }
-  }
-}
-
 function post (channelId, text, event, session) {
-  let username
+  let senderId
   let threadKey
+  let username
   const pageId = session._pageId
   if (event.message.is_echo) {
     if (event.message.app_id === process.env.FACEBOOK_APP_ID) {
-      console.log('IGNORING MESSAGE TO MYSELF: %s', text)
+      debug('IGNORING MESSAGE TO MYSELF: %s', text)
       return
     }
 
     username = settings.apps[event.message.app_id] || event.message.app_id
-    threadKey = event.recipient.id + ':' + pageId
+    senderId = event.recipient.id
   } else {
     username = `${session.profile.first_name} ${session.profile.last_name}`
-    threadKey = event.sender.id + ':' + pageId
+    senderId = event.sender.id
   }
-  // Use the web client b/c the rtm client can't override icon_url/username or do threads
-  web.chat.postMessage(channelId, text, {
-    icon_url: session.profile.profile_pic,
-    username,
-    thread_ts: threadStore.get(threadKey),
-  }, (err, res) => {
-    if (err) {
-      console.error(err)
-      return
-    }
+  threadKey = pageId + ':' + senderId
 
-    if (!threadStore.has(threadKey)) {
-      threadStore.set(threadKey, res.ts)
-    }
-  })
+  let threadTs
+  threadCache.get(threadKey)
+    .then((value) => {
+      debug('looking at %s got %s', threadKey, value)
+      threadTs = value
+      // Use the web client b/c the rtm client can't override icon_url/username or do threads
+      return web.chat.postMessage(channelId, text, {
+        icon_url: session.profile.profile_pic,
+        username,
+        thread_ts: threadTs,
+      })
+    })
+    .then((res) => {
+      if (!threadTs) {
+        debug('Saving thread for future use %s', res.ts)
+        // Using a basic redis client would let us do multi-set
+        return Promise.all([
+          threadCache.set(`thread:${res.ts}`, {pageId, senderId}),
+          threadCache.set(threadKey, res.ts),
+        ])
+      }
+    })
+    .catch(console.error)
 }
 
 // EVENTS
@@ -100,20 +113,16 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
 rtm.on(RTM_EVENTS.MESSAGE, (message) => {
   if (!message.thread_ts || !message.user) {
     // Must be in a thread, and must be from a human
-    // FIXME must be in a thread about a message
     return
   }
 
-  try {
-    const [senderId, pageId] = findMetaForThread(message.thread_ts)
-    return messenger.pageSend(pageId, senderId, new Text(message.text))
-  } catch (e) {
-    console.error(`No thread found ${message.text}`)
-    // TODO figure out how to not trigger on random threaded conversations
-    // return web.chat.postMessage(message.channel, '_Sorry, but this thread is closed to new messages_', {
-    //   thread_ts: message.thread_ts,
-    // })
-  }
+  return threadCache.get(`thread.${message.thread_ts}`)
+    .then(({senderId, pageId} = {}) => {
+      if (senderId && pageId) {
+        return messenger.pageSend(pageId, senderId, new Text(message.text))
+      }
+    })
+    .catch(console.error)
 })
 
 messenger.start()
