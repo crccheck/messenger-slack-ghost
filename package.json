@@ -14,14 +14,16 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@slack/client": "^3.8.1",
-    "launch-vehicle-fbm": "^1.1.1"
+    "@slack/client": "^3.9.0",
+    "launch-vehicle-fbm": "^1.5.0"
   },
   "devDependencies": {
-    "eslint": "^3.17.1",
-    "eslint-config-standard": "^7.0.1",
+    "eslint": "^3.19.0",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-node": "^4.2.2",
     "eslint-plugin-promise": "^3.5.0",
-    "eslint-plugin-standard": "^2.1.1"
+    "eslint-plugin-standard": "^3.0.1"
   },
   "private": true
 }
