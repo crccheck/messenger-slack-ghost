@@ -46,8 +46,9 @@ function findMetaForThread (ts) {
 }
 
 function post (channelId, text, event, session) {
-  let username
+  let senderId
   let threadKey
+  let username
   const pageId = session._pageId
   if (event.message.is_echo) {
     if (event.message.app_id === process.env.FACEBOOK_APP_ID) {
@@ -56,11 +57,12 @@ function post (channelId, text, event, session) {
     }
 
     username = settings.apps[event.message.app_id] || event.message.app_id
-    threadKey = event.recipient.id + ':' + pageId
+    senderId = event.recipient.id
   } else {
     username = `${session.profile.first_name} ${session.profile.last_name}`
-    threadKey = event.sender.id + ':' + pageId
+    senderId = event.sender.id
   }
+  threadKey = pageId + ':' + senderId
   let threadTs
   threadCache.get(threadKey)
     .then((value) => {
@@ -76,8 +78,11 @@ function post (channelId, text, event, session) {
     .then((res) => {
       if (!threadTs) {
         debug('Saving thread for future use %s', res.ts)
-        // threadCache.set(res.ts, {})
-        return threadCache.set(threadKey, res.ts)
+        // Using a basic redis client would let us do multi-set
+        return Promise.all([
+          threadCache.set(res.ts, {pageId, senderId}),
+          threadCache.set(threadKey, res.ts),
+        ])
       }
     })
     .catch(console.error)
