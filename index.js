@@ -1,3 +1,4 @@
+const pify = require('bluebird').promisify
 const Cacheman = require('cacheman')
 const CachemanRedis = require('cacheman-redis')
 const debug = require('debug')('slack-ghost')
@@ -7,7 +8,6 @@ const { MemoryDataStore, RtmClient, WebClient } = require('@slack/client')
 const RTM_CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS.RTM
 const RTM_EVENTS = require('@slack/client').RTM_EVENTS
 const settings = require('./settings')
-
 
 const web = new WebClient(process.env.SLACK_API_TOKEN)
 debug('Using redis cache backend: %s', process.env.REDIS_URL)
@@ -51,7 +51,7 @@ function post (channelId, text, event, session) {
   const pageId = session._pageId
   if (event.message.is_echo) {
     if (event.message.app_id === process.env.FACEBOOK_APP_ID) {
-      console.log('IGNORING MESSAGE TO MYSELF: %s', text)
+      debug('IGNORING MESSAGE TO MYSELF: %s', text)
       return
     }
 
@@ -61,21 +61,26 @@ function post (channelId, text, event, session) {
     username = `${session.profile.first_name} ${session.profile.last_name}`
     threadKey = event.sender.id + ':' + pageId
   }
-  // Use the web client b/c the rtm client can't override icon_url/username or do threads
-  web.chat.postMessage(channelId, text, {
-    icon_url: session.profile.profile_pic,
-    username,
-    thread_ts: threadStore.get(threadKey),
-  }, (err, res) => {
-    if (err) {
-      console.error(err)
-      return
-    }
-
-    if (!threadStore.has(threadKey)) {
-      threadStore.set(threadKey, res.ts)
-    }
-  })
+  let threadTs
+  threadCache.get(threadKey)
+    .then((value) => {
+      debug('looking at %s got %s', threadKey, value)
+      threadTs = value
+      // Use the web client b/c the rtm client can't override icon_url/username or do threads
+      return web.chat.postMessage(channelId, text, {
+        icon_url: session.profile.profile_pic,
+        username,
+        thread_ts: threadTs,
+      })
+    })
+    .then((res) => {
+      if (!threadTs) {
+        debug('Saving thread for future use %s', res.ts)
+        // threadCache.set(res.ts, {})
+        return threadCache.set(threadKey, res.ts)
+      }
+    })
+    .catch(console.error)
 }
 
 // EVENTS
