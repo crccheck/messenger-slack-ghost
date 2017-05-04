@@ -69,7 +69,7 @@ function post (channelId, text, event, session) {
         debug('Saving thread for future use %s', res.ts)
         // Using a basic redis client would let us do multi-set
         return Promise.all([
-          threadCache.set(res.ts, {pageId, senderId}),
+          threadCache.set(`thread:${res.ts}`, {pageId, senderId}),
           threadCache.set(threadKey, res.ts),
         ])
       }
@@ -113,16 +113,16 @@ rtm.on(RTM_CLIENT_EVENTS.RTM_CONNECTION_OPENED, () => {
 rtm.on(RTM_EVENTS.MESSAGE, (message) => {
   if (!message.thread_ts || !message.user) {
     // Must be in a thread, and must be from a human
-    // TODO must be in a thread about a Messenger conversation
     return
   }
 
-  return threadCache.get(message.thread_ts)
+  return threadCache.get(`thread.${message.thread_ts}`)
     .then(({senderId, pageId} = {}) => {
       if (senderId && pageId) {
         return messenger.pageSend(pageId, senderId, new Text(message.text))
       }
     })
+    .catch(console.error)
 })
 
 messenger.start()
