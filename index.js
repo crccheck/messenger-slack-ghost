@@ -1,15 +1,29 @@
+const Cacheman = require('cacheman')
+const CachemanRedis = require('cacheman-redis')
+const debug = require('debug')('slack-ghost')
 const { Messenger, Text } = require('launch-vehicle-fbm')
+const redisUrlParse = require('redis-url-parse')
 const { MemoryDataStore, RtmClient, WebClient } = require('@slack/client')
 const RTM_CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS.RTM
 const RTM_EVENTS = require('@slack/client').RTM_EVENTS
 const settings = require('./settings')
 
+
 const web = new WebClient(process.env.SLACK_API_TOKEN)
-const messenger = new Messenger({emitGreetings: false, pages: settings.pages})
+debug('Using redis cache backend: %s', process.env.REDIS_URL)
+const cacheOptions = {
+  engine: new CachemanRedis(redisUrlParse(process.env.REDIS_URL)),
+  prefix: process.env.FACEBOOK_APP_ID,
+}
+const fbmCache = new Cacheman('sessions', Object.assign({
+  ttl: 7 * 24 * 60 * 60,  // 1 week in seconds
+}, cacheOptions))
+const messenger = new Messenger({emitGreetings: false, pages: settings.pages, cache: fbmCache})
 const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   logLevel: 'error',
   dataStore: new MemoryDataStore(),
 })
+
 
 // UTILITIES
 ////////////
