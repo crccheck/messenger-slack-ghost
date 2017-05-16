@@ -1,8 +1,4 @@
 module.exports = {
-  pages: {
-    // pageId: accessToken
-    '999999999999999': 'EAAZAwVJrsqyMaryHadALittleLamb',
-  },
   // Optional, add other apps by id to get a human friendly username
   apps: {
     '1847777777777777': 'Quiz Bot',

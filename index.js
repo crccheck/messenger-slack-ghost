@@ -15,8 +15,15 @@ const cacheOptions = {
   prefix: process.env.FACEBOOK_APP_ID,
   ttl: 7 * 24 * 60 * 60,  // 1 week in seconds
 }
+let pages
+try {
+  pages = JSON.parse(process.env.SLACK_GHOST_PAGES)
+} catch (err) {
+  console.error('FATAL: Invalid SLACK_GHOST_PAGES config, is it set? Message: %s', err.message)
+  process.exit(1)
+}
 const fbmCache = new Cacheman('sessions', cacheOptions)
-const messenger = new Messenger({emitGreetings: false, pages: settings.pages, cache: fbmCache})
+const messenger = new Messenger({emitGreetings: false, pages, cache: fbmCache})
 const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   logLevel: 'error',
   dataStore: new MemoryDataStore(),
