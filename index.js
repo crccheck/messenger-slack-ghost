@@ -6,7 +6,6 @@ const redisUrlParse = require('redis-url-parse')
 const { MemoryDataStore, RtmClient, WebClient } = require('@slack/client')
 const RTM_CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS.RTM
 const RTM_EVENTS = require('@slack/client').RTM_EVENTS
-const settings = require('./settings')
 
 const web = new WebClient(process.env.SLACK_API_TOKEN)
 debug('Using redis cache backend: %s', process.env.REDIS_URL)
@@ -29,6 +28,7 @@ const rtm = new RtmClient(process.env.SLACK_API_TOKEN, {
   dataStore: new MemoryDataStore(),
 })
 const threadCache = new Cacheman('threads', cacheOptions)
+const apps = JSON.parse(process.env.SLACK_GHOST_APPS || '{}')
 
 
 // UTILITIES
@@ -51,7 +51,7 @@ function post (channelId, text, event, session) {
       return
     }
 
-    username = settings.apps[event.message.app_id] || event.message.app_id
+    username = apps[event.message.app_id] || event.message.app_id
     senderId = event.recipient.id
   } else {
     username = `${session.profile.first_name} ${session.profile.last_name}`
