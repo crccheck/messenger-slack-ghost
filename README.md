@@ -8,6 +8,13 @@ This bot subscribes to multiple page's feeds, and relays everything but
 postback dialogs to a Slack room. All conversations are threaded, and you can
 message the user directly by replying in the thread.
 
+Setup
+-----
+
+### In your Facebook app
+
+Enable at least `message_echoes`, `messages`, and `messaging_postbacks`
+
 
 Known issues
 ------------
