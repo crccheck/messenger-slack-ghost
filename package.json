@@ -15,9 +15,11 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@slack/client": "^3.9.0",
+    "bluebird": "^3.5.0",
     "cacheman": "^2.2.1",
     "cacheman-redis": "^1.1.2",
     "launch-vehicle-fbm": "^1.5.0",
+    "redis": "^2.7.1",
     "redis-url-parse": "^1.0.2"
   },
   "devDependencies": {
