@@ -12,7 +12,7 @@ debug('Using redis cache backend: %s', process.env.REDIS_URL)
 const cacheOptions = {
   engine: new CachemanRedis(redisUrlParse(process.env.REDIS_URL)),
   prefix: process.env.FACEBOOK_APP_ID,
-  ttl: 7 * 24 * 60 * 60,  // 1 week in seconds
+  ttl: 7 * 24 * 60 * 60, // 1 week in seconds
 }
 let pages
 try {
@@ -35,7 +35,7 @@ const apps = JSON.parse(process.env.SLACK_GHOST_APPS || '{}')
 ////////////
 
 function getChannelId (name, dataStore) {
-  const needle = name.replace(/^#/, '')  // getGroupByName does not like prefixes
+  const needle = name.replace(/^#/, '') // getGroupByName does not like prefixes
   const data = dataStore.getChannelByName(needle) || dataStore.getGroupByName(needle)
   return data.id
 }
